@@ -1,0 +1,2 @@
+# PirateBot
+PirateBot for Discord
