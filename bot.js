@@ -15,24 +15,49 @@ var pre = "ar!"
 
 class Pirate {
 	constructor (msg) {
-		this.name = msg.author.tag;
+		this.id = msg.author.id
+		this.tag = msg.author.tag
+		this.name = msg.author.username;
+		this.bounty = 0;
 		this.level = 1;
 		this.xp = 0;
-		this.attack = 100;
-		this.defense = 100;
-		this.cunning = 100;
-		this.evasion = 100;
+		this.hp = 100;
+		this.attack = 11;
+		this.defense = 10;
+		this.cunning = 11;
+		this.evasion = 12;
 		this.gold = 500;
-		this.booty = {"Voodoo Doll":50};
+		this.booty = {"voodoo doll":50};
 	}
 
 	getStats () {
 		var count = Object.keys(this.booty).length;
-		return `Here are your Stats:
-			Level: ${this.level}
-			XP: ${this.xp}
-			Gold: ${this.gold}
-			Booty: ${count} items`;
+		return `Name: ${this.name}
+		Bounty: ${this.bounty} gold
+		Level: ${this.level}
+		XP: ${this.xp}
+		HP: ${this.hp}
+		Attack: ${this.attack}
+		Defense: ${this.defense}
+		Cunning: ${this.cunning}
+		Evasion: ${this.evasion}
+		Gold: ${this.gold}
+		Booty: ${count} items`;
+	}
+
+	levelup () {
+		if (this.xp / 100 >= this.level * 2) {
+			this.level++;
+			var multi = Math.trunc(Math.random()*100);
+			this.hp += Math.trunc(1.1 * multi);
+			this.attack += Math.trunc(1.2 * multi);
+			this.defense += Math.trunc(1.1 * multi);
+			this.cunning += Math.trunc(1.2 * multi);
+			this.evasion += Math.trunc(1.3 * multi);
+
+			return ` You have reached level ${this.level}!`;
+		} else
+			return "";
 	}
 
 	exploreTreasure (r) {
@@ -43,33 +68,58 @@ class Pirate {
 		var booty = items[multi];
 		this.booty[Object.keys(booty)] = Object.values(booty);
 
-		var reply = `${this.name}, you have found ${gold} gold and a(n) ${Object.keys(booty)}!`
+		var reply = `You have found ${gold} gold and the following loot: ${Object.keys(booty)}!`
+		this.xp += (multi);
 
-		this.xp += (gold + multi);
-		if (this.xp / 100 >= this.level * 2) {
-			this.level++;
-			reply += ` You have leveled up to level ${this.level}!`
-		}
+		return reply + this.levelup();
 
-		return reply;
 	}
 
 	pillageTreasure () {
+
 		return;
 	}
 
 	getBooty () {
 		var reply = "Here's your stash of booty:\n"
 		for (const [key,value] of Object.entries(this.booty))
-			reply += `${key} (value: ${value} gold)\n`
+			reply += `${key} (value: ${value} gold)\n`;
 		return reply;
 	}
 
-	plunderUser () {
+	sellBooty (item) {
+		item = item.join(" ");
+		if (item in this.booty) {
+			var reply = `You have sold ${item} for ${this.booty[item]} gold.`
+			this.gold += parseInt(this.booty[item]);
+			delete this.booty[item];
+			return reply;
+		} else {
+			return `${item} not found.`
+		}
+		
+	}
+
+
+	plunderUser (foe) {
+		var roll = Math.trunc(Math.random()*100);
+		var def = Math.trunc(Math.random()*100);
+		if (roll > def) {
+			var profit = roll - def
+			this.gold += profit;
+			sevenSeas[foe].stealGold(profit);
+			this.xp += roll;
+		}
+		return `You've received ${profit} gold stealing from ${sevenSeas[foe].name}!` + this.levelup();
+	}
+
+	stealGold(amount) {
+		this.gold -= amount;
 		return;
 	}
 
-	duelUser () {
+	duelUser (foe) {
+
 		return;
 	}
 }
@@ -84,28 +134,31 @@ function helpMenu (msg, cmd) {
 			helpMenuConfig();
 			break;
 		case "start":
-			msg.reply(`\`${pre}start\`: Starts your pirate adventure.`);
+			prettyReply(msg, `\`${pre}start\`: Starts your pirate adventure.`);
 			break;
 		case "stats":
-			msg.reply(`\`${pre}stats\`: Shows your level, stats, gold, and loot amount.`);
+			prettyReply(msg, `\`${pre}stats\`: Shows your level, stats, gold, and loot amount.`);
 			break;
 		case "explore":
-			msg.reply(`\`${pre}explore\`: Looks for treasure in the current or default channel.`);
+			prettyReply(msg, `\`${pre}explore\`: Looks for treasure in the current or default channel.`);
 			break;
 		case "pillage":
-			msg.reply(`\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.`);
+			prettyReply(msg, `\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.`);
 			break;
 		case "booty":
-			msg.reply(`\`${pre}booty\`: Shows your loot stash.`);
+			prettyReply(msg, `\`${pre}booty\`: Shows your loot stash.`);
 			break;
+		case "sell":
+			prettyReply(msg, `\`${pre}sell <item>\`: Sell an item to the shop.`);
+			break;	
 		case "plunder":
-			msg.reply(`\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
+			prettyReply(msg, `\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
 			break;
 		case "duel":
-			msg.reply(`\`${pre}plunder <pirate>\`: Battle another pirate.`);
+			prettyReply(msg, `\`${pre}plunder <pirate>\`: Battle another pirate.`);
 			break;	
 		default:
-			msg.reply(`here is the PirateBot Help Menu:
+			prettyReply(msg, `here is the PirateBot Help Menu:
 				\`${pre}help\`: Brings up this menu.
 
 				\`${pre}start\`: Starts your pirate adventure.
@@ -118,6 +171,8 @@ function helpMenu (msg, cmd) {
 				
 				\`${pre}booty\`: Shows your loot stash.
 				
+				\`${pre}sell <item>\`: Sell an item to the shop.
+
 				\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.
 				
 				\`${pre}duel <pirate>\`: Battle another pirate.
@@ -129,102 +184,124 @@ function helpMenu (msg, cmd) {
 
 function startAdventure (msg) {
 	//if pirate already exists
-	if (isPirate(msg)) {
+	if (isPirate(msg.author)) {
 		//return message saying so
-		var pirate = sevenSeas[msg.author.username]
-		msg.reply(`You're already a pirate, Matey!\n` + pirate.getStats());
+		var pirate = sevenSeas[msg.author.id]
+		prettyReply(msg, `You're already a pirate, Matey!\n` + pirate.getStats());
 	} else {
 		var pirate = new Pirate(msg);
-		sevenSeas[msg.author.username] = pirate;
-		msg.reply(`There's a new pirate on the seas! Make way for ${pirate.name}!\n` + pirate.getStats());	
+		sevenSeas[msg.author.id] = pirate;
+		prettyReply(msg, `There's a new pirate on the seas! Make way for ${pirate.name}!\n` + pirate.getStats());	
 	}
 	return;
 }
 
 function getStats (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg)) {
+	if (!isPirate(msg.author)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.username];
-		msg.reply(pirate.getStats());
+		var pirate = sevenSeas[msg.author.id];
+		prettyReply(msg, pirate.getStats());
 	}
 	return;
 }
 
 function exploreTreasure (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg)) {
+	if (!isPirate(msg.author)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`)
 	} else {
 		var r = Math.random();
-		if (r>0.66) {
-			var pirate = sevenSeas[msg.author.username];
-			msg.reply(pirate.exploreTreasure(r));
-		} else msg.reply("No treasure found here!");
+		if (r>0.30) {
+			var pirate = sevenSeas[msg.author.id];
+			prettyReply(msg, pirate.exploreTreasure(r));
+		} else
+			prettyReply(msg, "No treasure found here!");
 	}
 	return;
 }
 
 function pillageTreasure (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg)) {
+	if (!isPirate(msg.author)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		msg.reply("This function has not been set up yet!");
+		prettyReply(msg, "This function has not been set up yet!");
 	}
 	return;
 }
 
 function getBooty (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg)) {
+	if (!isPirate(msg.author)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.username];
-		msg.reply(pirate.getBooty());
+		var pirate = sevenSeas[msg.author.id];
+		prettyReply(msg, pirate.getBooty());
 	}
 	return;
 }
 
-function plunderUser (msg) {
+function sellBooty (msg, cmd) {
 	//if pirate doesn't exists
-	if (!isPirate(msg)) {
+	if (!isPirate(msg.author)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		msg.reply("This function has not been set up yet!");
+		var pirate = sevenSeas[msg.author.id];
+		prettyReply(msg, pirate.sellBooty(cmd.slice(1)));
 	}
 	return;
 }
 
-function duelUser (msg) {
+function plunderUser (msg, cmd) {
 	//if pirate doesn't exists
-	if (!isPirate(msg)) {
+	if (!isPirate(msg.author)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+	} else if (!isPirate(msg.mentions.members.first())) {
+		prettyReply(msg, `${cmd.slice(1)} is not a pirate!`);
+	} else if (msg.author.id == msg.mentions.members.first().id) {
+		prettyReply(msg, "You wanna rob yourself? LOL!")
 	} else {
-		msg.reply("This function has not been set up yet!");
+		var pirate = sevenSeas[msg.author.id];
+		prettyReply(msg, pirate.plunderUser(msg.mentions.members.first().id));
+	}
+	return;
+}
+
+function duelUser (msg, cmd) {
+	//if pirate doesn't exists
+	if (!isPirate(msg.author)) {
+		//return message saying so
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+	} else {
+		prettyReply(msg, "This function has not been set up yet!");
 	}
 	return;
 }
 
 function setConfig (msg) {
-	msg.reply("This function has not been set up yet!");
+	prettyReply(msg, "This function has not been set up yet!");
 	return;
 }
 
 // CHECK IF MSG SENDER IS A PIRATE
 
-function isPirate (msg) {
-	return msg.author.username in sevenSeas;
+function isPirate (user) {
+	if (user) {
+		return (user.id in sevenSeas);
+	}
 }
 
-
+function prettyReply (msg, reply) {
+	msg.reply(`\`\`\`${reply}\`\`\``);
+}
 
 // STARTUP
 
@@ -238,7 +315,7 @@ client.on('ready', () => {
 
 client.on('message', msg => {
 	if (msg.content.startsWith(pre)) {
-		var cmd = msg.content.replace(pre,"").split(" ");
+		var cmd = msg.content.toLowerCase().replace(pre,"").split(" ");
 		console.log(`Command received from ${msg.author.tag}: ${cmd}`);
 
 		if (cmd.length == 1) {
@@ -262,17 +339,17 @@ client.on('message', msg => {
 					getBooty(msg);
 					break;
 			}
-		} else if (cmd.length == 2) {
+		} else if (cmd.length > 1) {
 			switch (cmd[0]) {
+				case "sell":
+					sellBooty(msg, cmd);
+					break;
 				case "plunder":
-					plunderUser(msg);
+					plunderUser(msg, cmd);
 					break;
 				case "duel":
-					duelUser(msg);
+					duelUser(msg, cmd);
 					break;
-			}
-		} else {
-			switch (cmd[0]) {
 				case "config":
 					setConfig(msg);
 					break;
