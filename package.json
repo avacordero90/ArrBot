@@ -1,6 +1,6 @@
 {
 	"name": "PirateBot",
-	"version": "1.0.0",
+	"version": "1.0.3",
 	"description": "PirateBot",
 	"main": "bot.js",
 	"author": "Luna Catastrophe",
