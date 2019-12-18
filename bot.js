@@ -41,7 +41,7 @@ class Pirate {
 	getBooty () {
 		var reply = "Here's your stash of booty:\n"
 		for (const [key,value] of Object.entries(this.booty))
-			reply += `${key}. Value: ${value} gold.`
+			reply += `${key} (value: ${value} gold)`
 		return reply
 	}
 
@@ -131,12 +131,24 @@ function getStats (msg) {
 }
 
 function exploreChannel (msg) {
-	msg.reply("This function has not been set up yet!")
+	//if pirate doesn't exists
+	if (!isPirate(msg)) {
+		//return message saying so
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+	} else {
+		msg.reply("This function has not been set up yet!")
+	}
 	return;
 }
 
 function pillageTreasure (msg) {
-	msg.reply("This function has not been set up yet!")
+	//if pirate doesn't exists
+	if (!isPirate(msg)) {
+		//return message saying so
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+	} else {
+		msg.reply("This function has not been set up yet!")
+	}
 	return;
 }
 
@@ -153,16 +165,29 @@ function getBooty (msg) {
 }
 
 function plunderUser (msg) {
-	msg.reply("This function has not been set up yet!")
+	//if pirate doesn't exists
+	if (!isPirate(msg)) {
+		//return message saying so
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+	} else {
+		msg.reply("This function has not been set up yet!")
+	}
 	return;
 }
 
 function duelUser (msg) {
-	msg.reply("This function has not been set up yet!")
+	//if pirate doesn't exists
+	if (!isPirate(msg)) {
+		//return message saying so
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+	} else {
+		msg.reply("This function has not been set up yet!")
+	}
 	return;
 }
 
 function setConfig (msg) {
+	msg.reply("This function has not been set up yet!")
 	return;
 }
 
@@ -180,36 +205,43 @@ client.on('message', msg => {
 	if (msg.content.startsWith(pre)) {
 		var cmd = msg.content.replace(pre,"").split(" ");
 		console.log(`Command received from ${msg.author.tag}: ${cmd}`);
-		switch (cmd[0]) {
-			case "help":
-				helpMenu(msg, cmd);
-				break;
-			case "start":
-				startAdventure(msg);
-				break;
-			case "stats":
-				getStats(msg);
-				break;
-			case "explore":
-				exploreChannel(msg);
-				break;
-			case "pillage":
-				pillageTreasure(msg);
-				break;
-			case "booty":
-				getBooty(msg);
-				break;
-			case "plunder":
-				plunderUser(msg);
-				break;
-			case "duel":
-				duelUser(msg);
-				break;
-			case "config":
-				setConfig();
-				break;
-			// default:
-			// 	msg.reply("Sorry, '" + cmd + "' is not a command. Please type '" + pre + "help' to learn more.");
+
+		if (cmd.length == 1) {
+			switch (cmd[0]) {
+				case "help":
+					helpMenu(msg, cmd);
+					break;
+				case "start":
+					startAdventure(msg);
+					break;
+				case "stats":
+					getStats(msg);
+					break;
+				case "explore":
+					exploreChannel(msg);
+					break;
+				case "pillage":
+					pillageTreasure(msg);
+					break;
+				case "booty":
+					getBooty(msg);
+					break;
+			}
+		} else if (cmd.length == 2) {
+			switch (cmd[0]) {
+				case "plunder":
+					plunderUser(msg);
+					break;
+				case "duel":
+					duelUser(msg);
+					break;
+			}
+		} else {
+			switch (cmd[0]) {
+				case "config":
+					setConfig(msg);
+					break;
+			}
 		}
 	}
 });
