@@ -60,11 +60,16 @@ class Pirate {
 			return "";
 	}
 
+	bountyup (crime) {
+		this.bounty += crime;
+		return `The bounty on your head has risen to ${this.bounty}!`
+	}
+
 	exploreTreasure (r) {
 		var gold = Math.trunc(this.level*r*100);
 		this.gold += gold;
 
-		var multi = Math.trunc(Math.random()*100)
+		var multi = Math.trunc(Math.random()*items.length)
 		var booty = items[multi];
 		this.booty[Object.keys(booty)] = Object.values(booty);
 
@@ -100,7 +105,6 @@ class Pirate {
 		
 	}
 
-
 	plunderUser (foe) {
 		var roll = Math.trunc(Math.random()*100);
 		var def = Math.trunc(Math.random()*100);
@@ -109,8 +113,10 @@ class Pirate {
 			this.gold += profit;
 			sevenSeas[foe].stealGold(profit);
 			this.xp += roll;
+			return `You've received ${profit} gold stealing from ${sevenSeas[foe].name}!` + this.bountyup(roll) + this.levelup();
+		} else {
+			return `You were unable to steal any gold from ${sevenSeas[foe].name}.`		
 		}
-		return `You've received ${profit} gold stealing from ${sevenSeas[foe].name}!` + this.levelup();
 	}
 
 	stealGold(amount) {
@@ -134,50 +140,50 @@ function helpMenu (msg, cmd) {
 			helpMenuConfig();
 			break;
 		case "start":
-			prettyReply(msg, `\`${pre}start\`: Starts your pirate adventure.`);
+			msg.reply(`\`${pre}start\`: Starts your pirate adventure.`);
 			break;
 		case "stats":
-			prettyReply(msg, `\`${pre}stats\`: Shows your level, stats, gold, and loot amount.`);
+			msg.reply(`\`${pre}stats\`: Shows your level, stats, gold, and loot amount.`);
 			break;
 		case "explore":
-			prettyReply(msg, `\`${pre}explore\`: Looks for treasure in the current or default channel.`);
+			msg.reply(`\`${pre}explore\`: Looks for treasure in the current or default channel.`);
 			break;
 		case "pillage":
-			prettyReply(msg, `\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.`);
+			msg.reply(`\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.`);
 			break;
 		case "booty":
-			prettyReply(msg, `\`${pre}booty\`: Shows your loot stash.`);
+			msg.reply(`\`${pre}booty\`: Shows your loot stash.`);
 			break;
 		case "sell":
-			prettyReply(msg, `\`${pre}sell <item>\`: Sell an item to the shop.`);
+			msg.reply(`\`${pre}sell <item>\`: Sell an item to the shop.`);
 			break;	
 		case "plunder":
-			prettyReply(msg, `\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
+			msg.reply(`\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
 			break;
 		case "duel":
-			prettyReply(msg, `\`${pre}plunder <pirate>\`: Battle another pirate.`);
+			msg.reply(`\`${pre}plunder <pirate>\`: Battle another pirate.`);
 			break;	
 		default:
-			prettyReply(msg, `here is the PirateBot Help Menu:
-				\`${pre}help\`: Brings up this menu.
+			msg.reply(`PirateBot Command List:
+	\`${pre}help\`: Brings up this menu.
 
-				\`${pre}start\`: Starts your pirate adventure.
-				
-				\`${pre}stats\`: Shows your level, stats, gold, and loot amount.
-				
-				\`${pre}explore\`: Looks for treasure in the current or default channel.
-				
-				\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.
-				
-				\`${pre}booty\`: Shows your loot stash.
-				
-				\`${pre}sell <item>\`: Sell an item to the shop.
+	\`${pre}start\`: Starts your pirate adventure.
+	
+	\`${pre}stats\`: Shows your level, stats, gold, and loot amount.
+	
+	\`${pre}explore\`: Looks for treasure in the current or default channel.
+	
+	\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.
+	
+	\`${pre}booty\`: Shows your loot stash.
+	
+	\`${pre}sell <item>\`: Sell an item to the shop.
 
-				\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.
-				
-				\`${pre}duel <pirate>\`: Battle another pirate.
-				
-				\`${pre}config\`: Set PirateBot's configuration (Admin).
+	\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.
+	
+	\`${pre}duel <pirate>\`: Battle another pirate.
+	
+	\`${pre}config\`: Set PirateBot's configuration (Admin).
 				`);
 	}
 }
@@ -260,14 +266,15 @@ function sellBooty (msg, cmd) {
 }
 
 function plunderUser (msg, cmd) {
+	target = msg.mentions.members.first()
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
 		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
-	} else if (!isPirate(msg.mentions.members.first())) {
+	} else if (!isPirate(target)) {
 		prettyReply(msg, `${cmd.slice(1)} is not a pirate!`);
-	} else if (msg.author.id == msg.mentions.members.first().id) {
-		prettyReply(msg, "You wanna rob yourself? LOL!")
+	} else if (msg.author.id == target.id) {
+		prettyReply(msg, "You wanna rob yourself mate? LOL!")
 	} else {
 		var pirate = sevenSeas[msg.author.id];
 		prettyReply(msg, pirate.plunderUser(msg.mentions.members.first().id));
@@ -315,7 +322,7 @@ client.on('ready', () => {
 
 client.on('message', msg => {
 	if (msg.content.startsWith(pre)) {
-		var cmd = msg.content.toLowerCase().replace(pre,"").split(" ");
+		var cmd = msg.content.replace(pre,"").split(" ");
 		console.log(`Command received from ${msg.author.tag}: ${cmd}`);
 
 		if (cmd.length == 1) {
