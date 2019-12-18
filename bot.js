@@ -6,6 +6,7 @@ PirateBot
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const auth = require('./auth.json')
+const items = require('./items.json')
 
 var sevenSeas = {}
 var pre = "ar!"
@@ -14,9 +15,13 @@ var pre = "ar!"
 
 class Pirate {
 	constructor (msg) {
-		this.name = msg.author.username;
+		this.name = msg.author.tag;
 		this.level = 1;
 		this.xp = 0;
+		this.attack = 100;
+		this.defense = 100;
+		this.cunning = 100;
+		this.evasion = 100;
 		this.gold = 500;
 		this.booty = {"Voodoo Doll":50};
 	}
@@ -30,29 +35,47 @@ class Pirate {
 			Booty: ${count} items`;
 	}
 
-	exploreChannel () {
-		return
+	exploreTreasure (r) {
+		var gold = Math.trunc(this.level*r*100);
+		this.gold += gold;
+
+		var multi = Math.trunc(Math.random()*100)
+		var booty = items[multi];
+		this.booty[Object.keys(booty)] = Object.values(booty);
+
+		var reply = `${this.name}, you have found ${gold} gold and a(n) ${Object.keys(booty)}!`
+
+		this.xp += (gold + multi);
+		if (this.xp / 100 >= this.level * 2) {
+			this.level++;
+			reply += ` You have leveled up to level ${this.level}!`
+		}
+
+		return reply;
 	}
 
 	pillageTreasure () {
-		return
+		return;
 	}
 
 	getBooty () {
 		var reply = "Here's your stash of booty:\n"
 		for (const [key,value] of Object.entries(this.booty))
-			reply += `${key} (value: ${value} gold)`
-		return reply
+			reply += `${key} (value: ${value} gold)\n`
+		return reply;
 	}
 
 	plunderUser () {
-		return
+		return;
 	}
 
 	duelUser () {
-		return
+		return;
 	}
 }
+
+
+// HELP MENU
 
 function helpMenu (msg, cmd) {
 
@@ -113,7 +136,7 @@ function startAdventure (msg) {
 	} else {
 		var pirate = new Pirate(msg);
 		sevenSeas[msg.author.username] = pirate;
-		msg.reply(`There's a new pirate on the seas! Make way for ${pirate.name}!\n` + pirate.getStats())	;	
+		msg.reply(`There's a new pirate on the seas! Make way for ${pirate.name}!\n` + pirate.getStats());	
 	}
 	return;
 }
@@ -122,21 +145,25 @@ function getStats (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.username]
-		msg.reply(pirate.getStats())
+		var pirate = sevenSeas[msg.author.username];
+		msg.reply(pirate.getStats());
 	}
 	return;
 }
 
-function exploreChannel (msg) {
+function exploreTreasure (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg)) {
 		//return message saying so
 		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
 	} else {
-		msg.reply("This function has not been set up yet!")
+		var r = Math.random();
+		if (r>0.66) {
+			var pirate = sevenSeas[msg.author.username];
+			msg.reply(pirate.exploreTreasure(r));
+		} else msg.reply("No treasure found here!");
 	}
 	return;
 }
@@ -145,9 +172,9 @@ function pillageTreasure (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
 	} else {
-		msg.reply("This function has not been set up yet!")
+		msg.reply("This function has not been set up yet!");
 	}
 	return;
 }
@@ -156,10 +183,10 @@ function getBooty (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.username]
-		msg.reply(pirate.getBooty())
+		var pirate = sevenSeas[msg.author.username];
+		msg.reply(pirate.getBooty());
 	}
 	return;
 }
@@ -168,9 +195,9 @@ function plunderUser (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
 	} else {
-		msg.reply("This function has not been set up yet!")
+		msg.reply("This function has not been set up yet!");
 	}
 	return;
 }
@@ -179,17 +206,19 @@ function duelUser (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`)
+		msg.reply(`You're not yet a pirate! type ${pre}start to begin your adventure!`);
 	} else {
-		msg.reply("This function has not been set up yet!")
+		msg.reply("This function has not been set up yet!");
 	}
 	return;
 }
 
 function setConfig (msg) {
-	msg.reply("This function has not been set up yet!")
+	msg.reply("This function has not been set up yet!");
 	return;
 }
+
+// CHECK IF MSG SENDER IS A PIRATE
 
 function isPirate (msg) {
 	return msg.author.username in sevenSeas;
@@ -197,9 +226,15 @@ function isPirate (msg) {
 
 
 
+// STARTUP
+
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 });
+
+
+
+//COMMAND INTERPRETER
 
 client.on('message', msg => {
 	if (msg.content.startsWith(pre)) {
@@ -218,7 +253,7 @@ client.on('message', msg => {
 					getStats(msg);
 					break;
 				case "explore":
-					exploreChannel(msg);
+					exploreTreasure(msg);
 					break;
 				case "pillage":
 					pillageTreasure(msg);
