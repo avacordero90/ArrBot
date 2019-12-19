@@ -63,7 +63,7 @@ class Pirate {
 
 	bountyup (crime) {
 		this.bounty += crime;
-		return `The bounty on your head has risen to ${this.bounty}!`
+		return ` The bounty on your head has risen to ${this.bounty} gold!`
 	}
 
 	exploreTreasure (r) {
@@ -130,15 +130,37 @@ class Pirate {
 			var profit = roll - def
 			this.gold += profit;
 			sevenSeas[foe].stealGold(profit);
+
+
+			// THIS DOESN'T REALLY DO ANYTHING YET
+			for (const [key,value] of Object.entries(sevenSeas[foe].booty)) {
+				if (profit > value) {
+					this.booty[key] = value;
+					var booty = key;
+					break;
+				}
+			}
+
+			sevenSeas[foe].stealBooty(booty)
+
 			this.xp += roll;
-			return `You've received ${profit} gold stealing from ${sevenSeas[foe].name}!` + this.bountyup(roll) + this.levelup();
+			if (booty) {
+				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}. You also received ${booty}!` + this.bountyup(roll) + this.levelup();
+			} else {
+				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}!` + this.bountyup(roll) + this.levelup();
+			}
 		} else {
-			return `You were unable to steal any gold from ${sevenSeas[foe].name}.`		
+			return `You were unable to steal anything from ${sevenSeas[foe].name}.`		
 		}
 	}
 
 	stealGold(amount) {
 		this.gold -= amount;
+		return;
+	}
+
+	stealBooty(item) {
+		delete this.booty[item];
 		return;
 	}
 
@@ -155,7 +177,7 @@ function helpMenu (msg, cmd) {
 
 	switch (cmd[1]) {
 		case "config":
-			helpMenuConfig();
+			helpMenuConfig(msg);
 			break;
 		case "start":
 			msg.reply(`\`${pre}start\`: Starts your pirate adventure.`);
@@ -182,7 +204,7 @@ function helpMenu (msg, cmd) {
 			msg.reply(`\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
 			break;
 		case "duel":
-			msg.reply(`\`${pre}plunder <pirate>\`: Battle another pirate.`);
+			msg.reply(`\`${pre}duel <pirate>\`: Battle another pirate.`);
 			break;	
 		default:
 			msg.reply(`PirateBot Command List:
@@ -207,8 +229,13 @@ function helpMenu (msg, cmd) {
 	\`${pre}duel <pirate>\`: Battle another pirate.
 	
 	\`${pre}config\`: Set PirateBot's configuration (Admin).
-				`);
+			`);
 	}
+}
+
+function helpMenuConfig (msg) {
+	msg.reply("This function has not been set up yet.");
+	return;
 }
 
 function startAdventure (msg) {
@@ -323,7 +350,7 @@ function plunderUser (msg, cmd) {
 	} else if (!isPirate(target)) {
 		prettyReply(msg, `${cmd.slice(1)} is not a pirate!`);
 	} else if (msg.author.id == target.id) {
-		prettyReply(msg, "You wanna rob yourself mate? LOL!")
+		prettyReply(msg, "You wanna rob yourself, mate? LOL!")
 	} else {
 		var pirate = sevenSeas[msg.author.id];
 		prettyReply(msg, pirate.plunderUser(msg.mentions.members.first().id));
@@ -372,18 +399,21 @@ client.on('ready', () => {
 client.on('message', msg => {
 	if (msg.content.startsWith(pre)) {
 		var cmd = msg.content.replace(pre,"").split(" ");
+		var cl = cmd.length;
 		console.log(`Command received from ${msg.author.tag}: ${cmd}`);
 
-		// if (cmd.length == 1) {
+		if (cmd[0] == "help")
+			helpMenu(msg, cmd);
+		if (cl==1) {
 			switch (cmd[0]) {
-				case "help":
-					helpMenu(msg, cmd);
-					break;
 				case "start":
 					startAdventure(msg);
 					break;
 				case "stats":
 					getStats(msg);
+					break;
+				case "booty":
+					getBooty(msg);
 					break;
 				case "explore":
 					exploreTreasure(msg);
@@ -391,26 +421,29 @@ client.on('message', msg => {
 				case "pillage":
 					pillageTreasure(msg);
 					break;
-				case "booty":
-					getBooty(msg);
-					break;
-				case "sell":
-					sellBooty(msg, cmd);
-					break;
-				case "shop":
-					shopBooty(msg, cmd);
-					break;
-				case "plunder":
-					plunderUser(msg, cmd);
-					break;
-				case "duel":
-					duelUser(msg, cmd);
-					break;
-				case "config":
-					setConfig(msg);
-					break;
 			}
-		// }
+		}
+		switch (cmd[0]) {
+			case "shop":
+				if (cl > 1)
+					shopBooty(msg, cmd);
+				break;
+			case "sell":
+				if (cl > 2)
+					sellBooty(msg, cmd);
+				break;
+			case "plunder":
+				if (cl == 2)
+					plunderUser(msg, cmd);
+				break;
+			case "duel":
+				if (cl == 2)
+					duelUser(msg, cmd);
+				break;
+			case "config":
+				setConfig(msg);
+				break;
+		}
 	}
 });
 
