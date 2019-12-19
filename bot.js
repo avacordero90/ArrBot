@@ -2,7 +2,7 @@
 PirateBot
 	by Luna Catastrophe
 */
-
+const { Client, RichEmbed } = require('discord.js');
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const auth = require('./auth.json')
@@ -13,12 +13,15 @@ var shop = []
 var pre = "ar!"
 
 
+// THE PIRATE CLASS
+// each user is a pirate.
 
 class Pirate {
 	constructor (msg) {
-		this.id = msg.author.id
-		this.tag = msg.author.tag
+		this.id = msg.author.id;
+		this.tag = msg.author.tag;
 		this.name = msg.author.username;
+		this.avatar = msg.author.avatarURL;
 		this.bounty = 0;
 		this.level = 1;
 		this.xp = 0;
@@ -28,11 +31,10 @@ class Pirate {
 		this.cunning = 11;
 		this.evasion = 12;
 		this.gold = 50;
-		this.booty = {"voodoo doll":50};
+		this.booty = [{"voodoo doll":50}];
 	}
 
 	getStats () {
-		var count = Object.keys(this.booty).length;
 		return `Name: ${this.name}
 		Bounty: ${this.bounty} gold
 		Level: ${this.level}
@@ -43,13 +45,13 @@ class Pirate {
 		Cunning: ${this.cunning}
 		Evasion: ${this.evasion}
 		Gold: ${this.gold}
-		Booty: ${count} items`;
+		Booty: ${this.booty.length} items`;
 	}
 
 	levelup () {
 		if (this.xp / 100 >= this.level * 2) {
 			this.level++;
-			var multi = Math.trunc(Math.random()*100);
+			var multi = Math.trunc(Math.random());
 			this.hp += Math.trunc(1.1 * multi);
 			this.attack += Math.trunc(1.2 * multi);
 			this.defense += Math.trunc(1.1 * multi);
@@ -71,10 +73,9 @@ class Pirate {
 		this.gold += gold;
 
 		var multi = Math.trunc(Math.random()*items.length)
-		var booty = items[multi];
-		this.booty[Object.keys(booty)] = Object.values(booty);
+		this.booty[this.booty.length] = items[multi];
 
-		var reply = `You have found ${gold} gold and the following loot: ${Object.keys(booty)}!`
+		var reply = `You have found ${gold} gold and the following loot: ${Object.keys(items[multi])}!`
 		this.xp += (multi);
 
 		return reply + this.levelup();
@@ -87,9 +88,11 @@ class Pirate {
 	}
 
 	getBooty () {
-		var reply = "Here's your stash of booty:\n"
-		for (const [key,value] of Object.entries(this.booty))
-			reply += `${key} (value: ${value} gold)\n`;
+		var reply = "";
+		for (var item of this.booty)
+			for (const [key,value] of Object.entries(item))
+				reply += `${key} (value: ${value} gold)\n`;
+		console.log(reply)
 		return reply;
 	}
 
@@ -112,7 +115,7 @@ class Pirate {
 			if (item in value) {
 				var val = Object.values(value)
 				if (this.gold >= val) {
-					this.booty[item] = val;
+					this.booty[this.booty.length] = value;
 					this.gold -= val;
 					return `You've purchased ${item} for ${val} gold!`;
 				} else {
@@ -126,7 +129,7 @@ class Pirate {
 	plunderUser (foe) {
 		var roll = Math.trunc(Math.random()*100);
 		var def = Math.trunc(Math.random()*100);
-		if (roll > def) {
+		if (roll > def && sevenSeas[foe].gold > roll * 2) {
 			var profit = roll - def
 			this.gold += profit;
 			sevenSeas[foe].stealGold(profit);
@@ -134,7 +137,7 @@ class Pirate {
 
 			// THIS DOESN'T REALLY DO ANYTHING YET
 			for (const [key,value] of Object.entries(sevenSeas[foe].booty)) {
-				if (profit > value) {
+				if (profit * this.level > value) {
 					this.booty[key] = value;
 					var booty = key;
 					break;
@@ -154,6 +157,14 @@ class Pirate {
 		}
 	}
 
+	duelUser (foe) {
+		var roll = Math.trunc(Math.random()*100);
+		var def = Math.trunc(Math.random()*100);
+		
+
+		return;
+	}
+
 	stealGold(amount) {
 		this.gold -= amount;
 		return;
@@ -161,11 +172,6 @@ class Pirate {
 
 	stealBooty(item) {
 		delete this.booty[item];
-		return;
-	}
-
-	duelUser (foe) {
-
 		return;
 	}
 }
@@ -243,12 +249,13 @@ function startAdventure (msg) {
 	if (isPirate(msg.author)) {
 		//return message saying so
 		var pirate = sevenSeas[msg.author.id]
-		prettyReply(msg, `You're already a pirate, Matey!\n` + pirate.getStats());
+		prettyReplyAvatar(msg, `You're already a pirate, Matey!\n`, pirate.getStats());
 	} else {
 		var pirate = new Pirate(msg);
 		sevenSeas[msg.author.id] = pirate;
-		prettyReply(msg, `There's a new pirate on the seas! Make way for ${pirate.name}!\n` + pirate.getStats());	
+		prettyReplyAvatar(msg, `There's a new pirate on the seas!\n`, pirate.getStats());
 	}
+	// pirate.getStats(msg);
 	return;
 }
 
@@ -256,10 +263,10 @@ function getStats (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, pirate.getStats());
+		prettyReplyAvatar(msg, msg.author.username, pirate.getStats());
 	}
 	return;
 }
@@ -268,14 +275,14 @@ function exploreTreasure (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`)
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`)
 	} else {
 		var r = Math.random();
 		if (r>0.30) {
 			var pirate = sevenSeas[msg.author.id];
-			prettyReply(msg, pirate.exploreTreasure(r));
+			prettyReply(msg, `${msg.author.username} is exploring for treasure...`, pirate.exploreTreasure(r));
 		} else
-			prettyReply(msg, "No treasure found here!");
+			msg.reply("No treasure found here!");
 	}
 	return;
 }
@@ -284,9 +291,9 @@ function pillageTreasure (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		prettyReply(msg, "This function has not been set up yet!");
+		prettyReply(msg, msg.author.username, "This function has not been set up yet!");
 	}
 	return;
 }
@@ -295,10 +302,10 @@ function getBooty (msg) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, pirate.getBooty());
+		prettyReply(msg, `${msg.author.username}'s' booty:`, pirate.getBooty());
 	}
 	return;
 }
@@ -307,10 +314,10 @@ function sellBooty (msg, cmd) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, pirate.sellBooty(cmd.slice(1)));
+		prettyReply(msg, `${msg.author.username} is selling ${cmd.slice(1)}...`, pirate.sellBooty(cmd.slice(1)));
 
 	}
 	return;
@@ -320,22 +327,22 @@ function shopBooty (msg, cmd) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		if (cmd.length == 1) {
-			var reply = "Welcome to the shop! What would you like?\n";
+			var reply = `Welcome to the shop, ${msg.author.tag}! What would you like?\n\n`;
 			var rand = Math.trunc(Math.random()* items.length)
 			shop = items.slice(rand-10, rand+10)
 			for (item of shop){
-				// console.log(item)
+				console.log(item)
 				reply += `${Object.keys(item)} : ${Object.values(item)} gold\n`;
 			}
-			reply += `You can say ${pre}shop <item> to purchase any item.`;
-			prettyReply(msg, reply);
+			reply += `\nYou can say ${pre}shop <item> to purchase any item.`;
+			prettyReply(msg, "Shop", reply);
 			
 		} else if (cmd.length > 1) {
 			var pirate = sevenSeas[msg.author.id];
-			prettyReply(msg, pirate.shopBooty(cmd.slice(1)));
+			prettyReply(msg, "Shop", pirate.shopBooty(cmd.slice(1)));
 		}
 	}
 	return;
@@ -346,25 +353,36 @@ function plunderUser (msg, cmd) {
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else if (!isPirate(target)) {
-		prettyReply(msg, `${cmd.slice(1)} is not a pirate!`);
+		msg.reply(`That user is not a pirate!`);
 	} else if (msg.author.id == target.id) {
-		prettyReply(msg, "You wanna rob yourself, mate? LOL!")
+		msg.reply("You wanna rob yourself, mate? LOL!")
 	} else {
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, pirate.plunderUser(msg.mentions.members.first().id));
+		prettyReply(msg, `Plundering...${target.username}`, pirate.plunderUser(target.id));
 	}
 	return;
 }
 
 function duelUser (msg, cmd) {
+
+
+	target = msg.mentions.members.first()
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
 		//return message saying so
-		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+	} else if (!isPirate(target)) {
+		msg.reply(`${cmd.slice(1)} is not a pirate!`);
+	} else if (msg.author.id == target.id) {
+		msg.reply("You wanna fight yourself, mate? LOL!")
 	} else {
+
 		prettyReply(msg, "This function has not been set up yet!");
+
+		// var pirate = sevenSeas[msg.author.id];
+		// prettyReply(msg, `Dueling...${target.username}`, pirate.duelUser(target.id));
 	}
 	return;
 }
@@ -382,8 +400,30 @@ function isPirate (user) {
 	}
 }
 
-function prettyReply (msg, reply) {
-	msg.reply(`\`\`\`${reply}\`\`\``);
+function prettyReplyAvatar (msg, title, reply) {
+    var embed = new RichEmbed()
+		// Set the avatar
+		.setImage(msg.author.avatarURL)
+		// Set the title of the field
+		.setTitle(title)
+		// Set the color of the embed
+		.setColor(0x40e0d0)
+		// Set the main content of the embed
+		.setDescription(reply);
+	// Send the embed to the same channel as the message
+	msg.channel.send(embed);
+}
+
+function prettyReply (msg, title, reply) {
+    var embed = new RichEmbed()
+		// Set the title of the field
+		.setTitle(title)
+		// Set the color of the embed
+		.setColor(0x40e0d0)
+		// Set the main content of the embed
+		.setDescription(reply);
+	// Send the embed to the same channel as the message
+	msg.channel.send(embed);
 }
 
 // STARTUP
@@ -401,7 +441,6 @@ client.on('message', msg => {
 		var cmd = msg.content.replace(pre,"").split(" ");
 		var cl = cmd.length;
 		console.log(`Command received from ${msg.author.tag}: ${cmd}`);
-
 		if (cmd[0] == "help")
 			helpMenu(msg, cmd);
 		if (cl==1) {
@@ -425,7 +464,7 @@ client.on('message', msg => {
 		}
 		switch (cmd[0]) {
 			case "shop":
-				if (cl > 1)
+				if (cl >= 1)
 					shopBooty(msg, cmd);
 				break;
 			case "sell":
