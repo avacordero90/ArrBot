@@ -9,6 +9,7 @@ const auth = require('./auth.json')
 const items = require('./items.json')
 
 var sevenSeas = {}
+var shop = []
 var pre = "ar!"
 
 
@@ -26,7 +27,7 @@ class Pirate {
 		this.defense = 10;
 		this.cunning = 11;
 		this.evasion = 12;
-		this.gold = 500;
+		this.gold = 50;
 		this.booty = {"voodoo doll":50};
 	}
 
@@ -102,7 +103,24 @@ class Pirate {
 		} else {
 			return `${item} not found.`
 		}
-		
+	}
+
+	shopBooty (item) {
+		item = item.join(" ");
+
+		for (const [key, value] of Object.entries(shop)) {
+			if (item in value) {
+				var val = Object.values(value)
+				if (this.gold >= val) {
+					this.booty[item] = val;
+					this.gold -= val;
+					return `You've purchased ${item} for ${val} gold!`;
+				} else {
+					return `You don't have enough gold to buy ${item}!`;
+				}
+			}
+		}
+		return `${item} is not in stock.`;
 	}
 
 	plunderUser (foe) {
@@ -157,6 +175,9 @@ function helpMenu (msg, cmd) {
 		case "sell":
 			msg.reply(`\`${pre}sell <item>\`: Sell an item to the shop.`);
 			break;	
+		case "shop":
+			msg.reply(`\`${pre}shop [item]\`: view the shop inventory or purchase an item.`);
+			break;	
 		case "plunder":
 			msg.reply(`\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
 			break;
@@ -178,6 +199,8 @@ function helpMenu (msg, cmd) {
 	\`${pre}booty\`: Shows your loot stash.
 	
 	\`${pre}sell <item>\`: Sell an item to the shop.
+	
+	\`${pre}shop <item>\`: view the shop inventory or purchase an item.
 
 	\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.
 	
@@ -261,6 +284,32 @@ function sellBooty (msg, cmd) {
 	} else {
 		var pirate = sevenSeas[msg.author.id];
 		prettyReply(msg, pirate.sellBooty(cmd.slice(1)));
+
+	}
+	return;
+}
+
+function shopBooty (msg, cmd) {
+	//if pirate doesn't exists
+	if (!isPirate(msg.author)) {
+		//return message saying so
+		prettyReply(msg, `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+	} else {
+		if (cmd.length == 1) {
+			var reply = "Welcome to the shop! What would you like?\n";
+			var rand = Math.trunc(Math.random()* items.length)
+			shop = items.slice(rand-10, rand+10)
+			for (item of shop){
+				// console.log(item)
+				reply += `${Object.keys(item)} : ${Object.values(item)} gold\n`;
+			}
+			reply += `You can say ${pre}shop <item> to purchase any item.`;
+			prettyReply(msg, reply);
+			
+		} else if (cmd.length > 1) {
+			var pirate = sevenSeas[msg.author.id];
+			prettyReply(msg, pirate.shopBooty(cmd.slice(1)));
+		}
 	}
 	return;
 }
@@ -325,7 +374,7 @@ client.on('message', msg => {
 		var cmd = msg.content.replace(pre,"").split(" ");
 		console.log(`Command received from ${msg.author.tag}: ${cmd}`);
 
-		if (cmd.length == 1) {
+		// if (cmd.length == 1) {
 			switch (cmd[0]) {
 				case "help":
 					helpMenu(msg, cmd);
@@ -345,11 +394,11 @@ client.on('message', msg => {
 				case "booty":
 					getBooty(msg);
 					break;
-			}
-		} else if (cmd.length > 1) {
-			switch (cmd[0]) {
 				case "sell":
 					sellBooty(msg, cmd);
+					break;
+				case "shop":
+					shopBooty(msg, cmd);
 					break;
 				case "plunder":
 					plunderUser(msg, cmd);
@@ -361,7 +410,7 @@ client.on('message', msg => {
 					setConfig(msg);
 					break;
 			}
-		}
+		// }
 	}
 });
 
