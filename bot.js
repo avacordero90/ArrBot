@@ -89,23 +89,31 @@ class Pirate {
 
 	getBooty () {
 		var reply = "";
-		for (var item of this.booty)
-			for (const [key,value] of Object.entries(item))
-				reply += `${key} (value: ${value} gold)\n`;
-		console.log(reply)
-		return reply;
+		if (this.booty) {
+			for (var item of this.booty) {
+				console.log(item)
+				for (const [key,value] of Object.entries(item))
+					reply += `${key} (value: ${value} gold)\n`;
+			}
+			return reply;	
+		}
+		
 	}
 
 	sellBooty (item) {
 		item = item.join(" ");
-		if (item in this.booty) {
-			var reply = `You have sold ${item} for ${this.booty[item]} gold.`
-			this.gold += parseInt(this.booty[item]);
-			delete this.booty[item];
-			return reply;
-		} else {
-			return `${item} not found.`
+		var c = 0
+		for (const [key, value] of Object.entries(this.booty)) {
+			if (item in value) {
+				console.log(item, value)
+				this.gold += parseInt(Object.values(value));
+				var index = this.booty.indexOf(item);
+				this.booty.splice(index,1);
+				return `You've sold ${item} for ${val} gold!`;
+			}
+			c++;
 		}
+		return `${item} not found.`;
 	}
 
 	shopBooty (item) {
@@ -360,7 +368,7 @@ function plunderUser (msg, cmd) {
 		msg.reply("You wanna rob yourself, mate? LOL!")
 	} else {
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, `Plundering...${target.username}`, pirate.plunderUser(target.id));
+		prettyReply(msg, `Plundering...`, pirate.plunderUser(target.id));
 	}
 	return;
 }
@@ -468,7 +476,7 @@ client.on('message', msg => {
 					shopBooty(msg, cmd);
 				break;
 			case "sell":
-				if (cl > 2)
+				if (cl >= 2)
 					sellBooty(msg, cmd);
 				break;
 			case "plunder":
