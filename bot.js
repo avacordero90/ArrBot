@@ -90,7 +90,9 @@ class Pirate {
 	getBooty () {
 		var reply = "";
 		if (this.booty) {
+			console.log(this.booty)
 			for (var item of this.booty) {
+				console.log(item)
 				for (const [key,value] of Object.entries(item))
 					reply += `${key} (value: ${value} gold)\n`;
 			}
@@ -139,17 +141,22 @@ class Pirate {
 			this.gold += profit;
 			sevenSeas[foe].stealGold(profit);
 
-			for (var item of sevenSeas[foe].booty) {
-				for (const [key,value] of Object.entries(item)) {
-					if (profit * this.level > value) {
-						var loot = item
-						var booty = key;
+			if (sevenSeas[foe].booty) {
+				for (var item of sevenSeas[foe].booty) {
+					for (const [key,value] of Object.entries(item)) {
+						if (profit * this.level > value) {
+							var loot = item;
+							var booty = key;
+							var plunder = 1;
+						}
 					}
 				}
 			}
 
-			this.booty[this.booty.length] = loot;
-			sevenSeas[foe].stealBooty(booty)
+			if (plunder) {
+				this.booty[this.booty.length] = loot;
+				sevenSeas[foe].stealBooty(loot)
+			}
 
 			this.xp += roll;
 			if (booty) {
@@ -166,9 +173,9 @@ class Pirate {
 		var roll = Math.trunc(Math.random()*this.level);
 		var def = Math.trunc(Math.random()*sevenSeas[foe].level);
 		if (roll > def) {
-			console.log(`You won the roll with ${roll} vs ${def}!`)
+			console.log(`You won the duel with ${roll} vs ${def}!`)
 		} else {
-			console.log(`You lost the roll with ${roll} vs ${def}!`)
+			console.log(`You lost the duel with ${roll} vs ${def}!`)
 		}
 		return;
 	}
@@ -180,14 +187,16 @@ class Pirate {
 
 	stealBooty(item) {
 		// item = item.join(" ");
-		// console.log(item)
-		for (const [key, value] of Object.entries(this.booty)) {
-			if (item in value) {
-				// this.gold += parseInt(Object.values(value));
-				var index = this.booty.indexOf(item);
-				this.booty.splice(index,1);
-				return;
-			}
+		console.log(item)
+		for (var loot of this.booty) {
+			// for (const [key, value] of Object.entries(loot)) {
+				if (loot == item) {
+					// this.gold += parseInt(Object.values(value));
+					var index = this.booty.indexOf(item);
+					this.booty.splice(index,1);
+					return;
+				}
+			// }
 		}
 		// return `${item} not found.`;
 	}
