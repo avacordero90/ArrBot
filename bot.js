@@ -91,7 +91,6 @@ class Pirate {
 		var reply = "";
 		if (this.booty) {
 			for (var item of this.booty) {
-				console.log(item)
 				for (const [key,value] of Object.entries(item))
 					reply += `${key} (value: ${value} gold)\n`;
 			}
@@ -102,16 +101,13 @@ class Pirate {
 
 	sellBooty (item) {
 		item = item.join(" ");
-		var c = 0
 		for (const [key, value] of Object.entries(this.booty)) {
 			if (item in value) {
-				console.log(item, value)
 				this.gold += parseInt(Object.values(value));
 				var index = this.booty.indexOf(item);
 				this.booty.splice(index,1);
-				return `You've sold ${item} for ${val} gold!`;
+				return `You've sold ${item} for ${Object.values(value)} gold!`;
 			}
-			c++;
 		}
 		return `${item} not found.`;
 	}
@@ -137,28 +133,29 @@ class Pirate {
 	plunderUser (foe) {
 		var roll = Math.trunc(Math.random()*100);
 		var def = Math.trunc(Math.random()*100);
-		if (roll > def && sevenSeas[foe].gold > roll * 2) {
-			var profit = roll - def
+		var profit = roll - def
+		if (roll > def && sevenSeas[foe].gold >= profit * 2) {
+			
 			this.gold += profit;
 			sevenSeas[foe].stealGold(profit);
 
-
-			// THIS DOESN'T REALLY DO ANYTHING YET
-			for (const [key,value] of Object.entries(sevenSeas[foe].booty)) {
-				if (profit * this.level > value) {
-					this.booty[key] = value;
-					var booty = key;
-					break;
+			for (var item of sevenSeas[foe].booty) {
+				for (const [key,value] of Object.entries(item)) {
+					if (profit * this.level > value) {
+						var loot = item
+						var booty = key;
+					}
 				}
 			}
 
+			this.booty[this.booty.length] = loot;
 			sevenSeas[foe].stealBooty(booty)
 
 			this.xp += roll;
 			if (booty) {
 				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}. You also received ${booty}!` + this.bountyup(roll) + this.levelup();
 			} else {
-				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}!` + this.bountyup(roll) + this.levelup();
+				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}!` + this.bountyup(profit) + this.levelup();
 			}
 		} else {
 			return `You were unable to steal anything from ${sevenSeas[foe].name}.`		
@@ -166,10 +163,13 @@ class Pirate {
 	}
 
 	duelUser (foe) {
-		var roll = Math.trunc(Math.random()*100);
-		var def = Math.trunc(Math.random()*100);
-		
-
+		var roll = Math.trunc(Math.random()*this.level);
+		var def = Math.trunc(Math.random()*sevenSeas[foe].level);
+		if (roll > def) {
+			console.log(`You won the roll with ${roll} vs ${def}!`)
+		} else {
+			console.log(`You lost the roll with ${roll} vs ${def}!`)
+		}
 		return;
 	}
 
@@ -179,8 +179,17 @@ class Pirate {
 	}
 
 	stealBooty(item) {
-		delete this.booty[item];
-		return;
+		// item = item.join(" ");
+		// console.log(item)
+		for (const [key, value] of Object.entries(this.booty)) {
+			if (item in value) {
+				// this.gold += parseInt(Object.values(value));
+				var index = this.booty.indexOf(item);
+				this.booty.splice(index,1);
+				return;
+			}
+		}
+		// return `${item} not found.`;
 	}
 }
 
@@ -313,7 +322,12 @@ function getBooty (msg) {
 		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, `${msg.author.username}'s' booty:`, pirate.getBooty());
+		var booty = pirate.getBooty();
+		if (booty)
+			prettyReply(msg, `${msg.author.username}'s booty:`, booty);
+		else
+			prettyReply(msg, `${msg.author.username}, you don't have any booty!`, "");
+
 	}
 	return;
 }
@@ -342,7 +356,6 @@ function shopBooty (msg, cmd) {
 			var rand = Math.trunc(Math.random()* items.length)
 			shop = items.slice(rand-10, rand+10)
 			for (item of shop){
-				console.log(item)
 				reply += `${Object.keys(item)} : ${Object.values(item)} gold\n`;
 			}
 			reply += `\nYou can say ${pre}shop <item> to purchase any item.`;
@@ -382,15 +395,15 @@ function duelUser (msg, cmd) {
 		//return message saying so
 		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else if (!isPirate(target)) {
-		msg.reply(`${cmd.slice(1)} is not a pirate!`);
+		msg.reply(`That user is not a pirate!`);
 	} else if (msg.author.id == target.id) {
 		msg.reply("You wanna fight yourself, mate? LOL!")
 	} else {
 
-		prettyReply(msg, "This function has not been set up yet!");
+		// prettyReply(msg, "This function has not been set up yet!");
 
-		// var pirate = sevenSeas[msg.author.id];
-		// prettyReply(msg, `Dueling...${target.username}`, pirate.duelUser(target.id));
+		var pirate = sevenSeas[msg.author.id];
+		prettyReply(msg, `Dueling ${cmd.slice(1)}...`, pirate.duelUser(target.id));
 	}
 	return;
 }
