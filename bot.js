@@ -90,9 +90,7 @@ class Pirate {
 	getBooty () {
 		var reply = "";
 		if (this.booty) {
-			console.log(this.booty)
 			for (var item of this.booty) {
-				console.log(item)
 				for (const [key,value] of Object.entries(item))
 					reply += `${key} (value: ${value} gold)\n`;
 			}
@@ -170,14 +168,19 @@ class Pirate {
 	}
 
 	duelUser (foe) {
-		var roll = Math.trunc(Math.random()*this.level);
-		var def = Math.trunc(Math.random()*sevenSeas[foe].level);
+		var roll = Math.trunc(Math.random()*this.level*100);
+		var def = Math.trunc(Math.random()*sevenSeas[foe].level*100);
 		if (roll > def) {
-			console.log(`You won the duel with ${roll} vs ${def}!`)
+			var reply = `You won the duel and earned the ${sevenSeas[foe].bounty} gold bounty on ${sevenSeas[foe].name}'s head!`;
+			this.gold += sevenSeas[foe].bounty;
+			sevenSeas[foe].bounty = 0;
+			return reply;
 		} else {
-			console.log(`You lost the duel with ${roll} vs ${def}!`)
+			var reply = `You lost the duel and ${sevenSeas[foe].name} earned the ${this.bounty} gold bounty on your head!`;
+			sevenSeas[foe].gold += this.bounty;
+			this.bounty = 0;
+			return reply;
 		}
-		return;
 	}
 
 	stealGold(amount) {
@@ -186,19 +189,13 @@ class Pirate {
 	}
 
 	stealBooty(item) {
-		// item = item.join(" ");
-		console.log(item)
 		for (var loot of this.booty) {
-			// for (const [key, value] of Object.entries(loot)) {
-				if (loot == item) {
-					// this.gold += parseInt(Object.values(value));
-					var index = this.booty.indexOf(item);
-					this.booty.splice(index,1);
-					return;
-				}
-			// }
+			if (loot == item) {
+				var index = this.booty.indexOf(item);
+				this.booty.splice(index,1);
+				return;
+			}
 		}
-		// return `${item} not found.`;
 	}
 }
 
@@ -396,8 +393,6 @@ function plunderUser (msg, cmd) {
 }
 
 function duelUser (msg, cmd) {
-
-
 	target = msg.mentions.members.first()
 	//if pirate doesn't exists
 	if (!isPirate(msg.author)) {
@@ -408,11 +403,8 @@ function duelUser (msg, cmd) {
 	} else if (msg.author.id == target.id) {
 		msg.reply("You wanna fight yourself, mate? LOL!")
 	} else {
-
-		// prettyReply(msg, "This function has not been set up yet!");
-
 		var pirate = sevenSeas[msg.author.id];
-		prettyReply(msg, `Dueling ${cmd.slice(1)}...`, pirate.duelUser(target.id));
+		prettyReply(msg, `Dueling...`, pirate.duelUser(target.id));
 	}
 	return;
 }
