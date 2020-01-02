@@ -1,204 +1,24 @@
 /*
-PirateBot
+PirateBot - bot.js
 	by Luna Catastrophe
+	Created: 12/17/2019
+	Latest: 12/30/2019
+	Version: 1.2.2
 */
+
 const { Client, RichEmbed } = require('discord.js');
 const Discord = require('discord.js');
-const client = new Discord.Client();
-const auth = require('./auth.json')
-const items = require('./items.json')
+const discClient = new Discord.Client();
+const MongoClient = require('mongodb').MongoClient;
+const readlineSync = require('readline-sync');
+const auth = require('./auth.json');
+const items = require('./items.json');
+const Pirate = require('./pirate.js');
+const mongo = require('./mongo.js')
 
 var sevenSeas = {}
 var shop = []
 var pre = "ar!"
-
-
-// THE PIRATE CLASS
-// each user is a pirate.
-
-class Pirate {
-	constructor (msg) {
-		this.id = msg.author.id;
-		this.tag = msg.author.tag;
-		this.name = msg.author.username;
-		this.avatar = msg.author.avatarURL;
-		this.bounty = 0;
-		this.level = 1;
-		this.xp = 0;
-		this.hp = 100;
-		this.attack = 11;
-		this.defense = 10;
-		this.cunning = 11;
-		this.evasion = 12;
-		this.gold = 50;
-		this.booty = [{"voodoo doll":50}];
-	}
-
-	getStats () {
-		return `Name: ${this.name}
-		Bounty: ${this.bounty} gold
-		Level: ${this.level}
-		XP: ${this.xp}
-		HP: ${this.hp}
-		Attack: ${this.attack}
-		Defense: ${this.defense}
-		Cunning: ${this.cunning}
-		Evasion: ${this.evasion}
-		Gold: ${this.gold}
-		Booty: ${this.booty.length} items`;
-	}
-
-	levelup () {
-		if (this.xp / 100 >= this.level * 2) {
-			this.level++;
-			var multi = Math.trunc(Math.random());
-			this.hp += Math.trunc(1.1 * multi);
-			this.attack += Math.trunc(1.2 * multi);
-			this.defense += Math.trunc(1.1 * multi);
-			this.cunning += Math.trunc(1.2 * multi);
-			this.evasion += Math.trunc(1.3 * multi);
-
-			return ` You have reached level ${this.level}!`;
-		} else
-			return "";
-	}
-
-	bountyup (crime) {
-		this.bounty += crime;
-		return ` The bounty on your head has risen to ${this.bounty} gold!`
-	}
-
-	exploreTreasure (r) {
-		var gold = Math.trunc(this.level*r*100);
-		this.gold += gold;
-
-		var multi = Math.trunc(Math.random()*items.length)
-		this.booty[this.booty.length] = items[multi];
-
-		var reply = `You have found ${gold} gold and the following loot: ${Object.keys(items[multi])}!`
-		this.xp += (multi);
-
-		return reply + this.levelup();
-
-	}
-
-	pillageTreasure () {
-
-		return;
-	}
-
-	getBooty () {
-		var reply = "";
-		if (this.booty) {
-			for (var item of this.booty) {
-				for (const [key,value] of Object.entries(item))
-					reply += `${key} (value: ${value} gold)\n`;
-			}
-			return reply;	
-		}
-		
-	}
-
-	sellBooty (item) {
-		item = item.join(" ");
-		for (const [key, value] of Object.entries(this.booty)) {
-			if (item in value) {
-				this.gold += parseInt(Object.values(value));
-				var index = this.booty.indexOf(item);
-				this.booty.splice(index,1);
-				return `You've sold ${item} for ${Object.values(value)} gold!`;
-			}
-		}
-		return `${item} not found.`;
-	}
-
-	shopBooty (item) {
-		item = item.join(" ");
-
-		for (const [key, value] of Object.entries(shop)) {
-			if (item in value) {
-				var val = Object.values(value)
-				if (this.gold >= val) {
-					this.booty[this.booty.length] = value;
-					this.gold -= val;
-					return `You've purchased ${item} for ${val} gold!`;
-				} else {
-					return `You don't have enough gold to buy ${item}!`;
-				}
-			}
-		}
-		return `${item} is not in stock.`;
-	}
-
-	plunderUser (foe) {
-		var roll = Math.trunc(Math.random()*100);
-		var def = Math.trunc(Math.random()*100);
-		var profit = roll - def
-		if (roll > def && sevenSeas[foe].gold >= profit * 2) {
-			
-			this.gold += profit;
-			sevenSeas[foe].stealGold(profit);
-
-			if (sevenSeas[foe].booty) {
-				for (var item of sevenSeas[foe].booty) {
-					for (const [key,value] of Object.entries(item)) {
-						if (profit * this.level > value) {
-							var loot = item;
-							var booty = key;
-							var plunder = 1;
-						}
-					}
-				}
-			}
-
-			if (plunder) {
-				this.booty[this.booty.length] = loot;
-				sevenSeas[foe].stealBooty(loot)
-			}
-
-			this.xp += roll;
-			if (booty) {
-				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}. You also received ${booty}!` + this.bountyup(roll) + this.levelup();
-			} else {
-				return `You've received ${profit} gold while stealing from ${sevenSeas[foe].name}!` + this.bountyup(profit) + this.levelup();
-			}
-		} else {
-			return `You were unable to steal anything from ${sevenSeas[foe].name}.`		
-		}
-	}
-
-	duelUser (foe) {
-		var roll = Math.trunc(Math.random()*this.level*100);
-		var def = Math.trunc(Math.random()*sevenSeas[foe].level*100);
-		if (roll > def) {
-			var reply = `You won the duel and earned the ${sevenSeas[foe].bounty} gold bounty on ${sevenSeas[foe].name}'s head!`;
-			this.gold += sevenSeas[foe].bounty;
-			sevenSeas[foe].bounty = 0;
-			return reply;
-		} else {
-			var reply = `You lost the duel and ${sevenSeas[foe].name} earned the ${this.bounty} gold bounty on your head!`;
-			sevenSeas[foe].gold += this.bounty;
-			this.bounty = 0;
-			return reply;
-		}
-	}
-
-	stealGold(amount) {
-		this.gold -= amount;
-		return;
-	}
-
-	stealBooty(item) {
-		for (var loot of this.booty) {
-			if (loot == item) {
-				var index = this.booty.indexOf(item);
-				this.booty.splice(index,1);
-				return;
-			}
-		}
-	}
-}
-
 
 // HELP MENU
 
@@ -209,34 +29,34 @@ function helpMenu (msg, cmd) {
 			helpMenuConfig(msg);
 			break;
 		case "start":
-			msg.reply(`\`${pre}start\`: Starts your pirate adventure.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}start\`: Starts your pirate adventure.`);
 			break;
 		case "stats":
-			msg.reply(`\`${pre}stats\`: Shows your level, stats, gold, and loot amount.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}stats\`: Shows your level, stats, gold, and loot amount.`);
 			break;
 		case "explore":
-			msg.reply(`\`${pre}explore\`: Looks for treasure in the current or default channel.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}explore\`: Looks for treasure in the current or default channel.`);
 			break;
 		case "pillage":
-			msg.reply(`\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}pillage\`: Snatches up treasure and adds it to your loot stash.`);
 			break;
 		case "booty":
-			msg.reply(`\`${pre}booty\`: Shows your loot stash.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}booty\`: Shows your loot stash.`);
 			break;
 		case "sell":
-			msg.reply(`\`${pre}sell <item>\`: Sell an item to the shop.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}sell <item>\`: Sell an item to the shop.`);
 			break;	
 		case "shop":
-			msg.reply(`\`${pre}shop [item]\`: view the shop inventory or purchase an item.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}shop [item]\`: view the shop inventory or purchase an item.`);
 			break;	
 		case "plunder":
-			msg.reply(`\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}plunder <pirate>\`: Attempts to steal loot and gold from another pirate.`);
 			break;
 		case "duel":
-			msg.reply(`\`${pre}duel <pirate>\`: Battle another pirate.`);
+			prettyReply(msg, "PirateBot Help", `\`${pre}duel <pirate>\`: Battle another pirate.`);
 			break;	
 		default:
-			msg.reply(`PirateBot Command List:
+			prettyReply(msg, "PirateBot Help", `Usage:
 	\`${pre}help\`: Brings up this menu.
 
 	\`${pre}start\`: Starts your pirate adventure.
@@ -263,32 +83,46 @@ function helpMenu (msg, cmd) {
 }
 
 function helpMenuConfig (msg) {
-	msg.reply("This function has not been set up yet.");
+	prettyReply(msg, "PirateBot", "This function has not been set up yet.");
 	return;
 }
 
 function startAdventure (msg) {
-	//if pirate already exists
-	if (isPirate(msg.author)) {
-		//return message saying so
-		var pirate = sevenSeas[msg.author.id]
-		prettyReplyAvatar(msg, `You're already a pirate, Matey!\n`, pirate.getStats());
-	} else {
-		var pirate = new Pirate(msg);
-		sevenSeas[msg.author.id] = pirate;
-		prettyReplyAvatar(msg, `There's a new pirate on the seas!\n`, pirate.getStats());
-	}
-	// pirate.getStats(msg);
+	dbClient.connect(err => {
+		const pirates = dbClient.db("PirateBot").collection("Pirates");
+
+		var pirate = pirates.findOne({"id": msg.author.id}, function(err, result) {
+			if (err) throw err;
+			// console.log(result);
+
+			//if pirate already exists
+			if (result) {
+				//return message saying so
+				prettyReplyAvatar(msg, `You're already a pirate, Matey!\n`, result);
+			} else {
+				var pirate = new Pirate(msg);
+				mongo.insertPirate(pirates, pirate);
+				prettyReplyAvatar(msg, `There's a new pirate on the seas!\n`, pirate);
+			}
+		});
+	});
+
 	return;
 }
 
+
+
+// CONTINUE CODING HERE!
+
+
+
 function getStats (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.id];
+		var pirate = mongo.getPirate(pirates, msg.author.id);
 		prettyReplyAvatar(msg, msg.author.username, pirate.getStats());
 	}
 	return;
@@ -296,80 +130,82 @@ function getStats (msg) {
 
 function exploreTreasure (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`)
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`)
 	} else {
 		var r = Math.random();
 		if (r>0.30) {
-			var pirate = sevenSeas[msg.author.id];
+			var pirate = mongo.getPirate(pirates, msg.author.id);
 			prettyReply(msg, `${msg.author.username} is exploring for treasure...`, pirate.exploreTreasure(r));
+			mongo.updatePirate(pirates, pirate);
 		} else
-			msg.reply("No treasure found here!");
+			prettyReply(msg, "PirateBot", "No treasure found here!");
 	}
 	return;
 }
 
 function pillageTreasure (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		prettyReply(msg, msg.author.username, "This function has not been set up yet!");
+		// pirates.insertOne(pirate);
 	}
 	return;
 }
 
 function getBooty (msg) {
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.id];
+		var pirate = mongo.getPirate(pirates, msg.author.id);
 		var booty = pirate.getBooty();
 		if (booty)
 			prettyReply(msg, `${msg.author.username}'s booty:`, booty);
 		else
 			prettyReply(msg, `${msg.author.username}, you don't have any booty!`, "");
-
 	}
 	return;
 }
 
 function sellBooty (msg, cmd) {
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
-		var pirate = sevenSeas[msg.author.id];
+		var pirate = mongo.getPirate(pirates, msg.author.id);
 		prettyReply(msg, `${msg.author.username} is selling ${cmd.slice(1)}...`, pirate.sellBooty(cmd.slice(1)));
-
+		mongo.updatePirate(pirates, pirate);
 	}
 	return;
 }
 
 function shopBooty (msg, cmd) {
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
 	} else {
 		if (cmd.length == 1) {
-			var reply = `Welcome to the shop, ${msg.author.tag}! What would you like?\n\n`;
+			var reply = `Welcome to the shop! What would you like?\n\n`;
 			var rand = Math.trunc(Math.random()* items.length)
 			shop = items.slice(rand-10, rand+10)
 			for (item of shop){
 				reply += `${Object.keys(item)} : ${Object.values(item)} gold\n`;
 			}
-			reply += `\nYou can say ${pre}shop <item> to purchase any item.`;
+			reply += `\nYou can say "${pre}shop <item>" to purchase any item.`;
 			prettyReply(msg, "Shop", reply);
 			
 		} else if (cmd.length > 1) {
-			var pirate = sevenSeas[msg.author.id];
+			var pirate = mongo.getPirate(pirates, msg.author.id);
 			prettyReply(msg, "Shop", pirate.shopBooty(cmd.slice(1)));
+			mongo.updatePirate(pirates, pirate);
 		}
 	}
 	return;
@@ -378,16 +214,17 @@ function shopBooty (msg, cmd) {
 function plunderUser (msg, cmd) {
 	target = msg.mentions.members.first()
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
-	} else if (!isPirate(target)) {
-		msg.reply(`That user is not a pirate!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+	} else if (!mongo.isPirate(target)) {
+		prettyReply(msg, "PirateBot", `That user is not a pirate!`);
 	} else if (msg.author.id == target.id) {
-		msg.reply("You wanna rob yourself, mate? LOL!")
+		prettyReply(msg, "PirateBot", "You wanna rob yourself, mate? LOL!")
 	} else {
-		var pirate = sevenSeas[msg.author.id];
+		var pirate = mongo.getPirate(pirates, msg.author.id);
 		prettyReply(msg, `Plundering...`, pirate.plunderUser(target.id));
+		mongo.updatePirate(pirates, pirate);
 	}
 	return;
 }
@@ -395,16 +232,17 @@ function plunderUser (msg, cmd) {
 function duelUser (msg, cmd) {
 	target = msg.mentions.members.first()
 	//if pirate doesn't exists
-	if (!isPirate(msg.author)) {
+	if (!mongo.isPirate(pirates, msg.author.id)) {
 		//return message saying so
-		msg.reply(`You're not yet a pirate! Type ${pre}start to begin your adventure!`);
-	} else if (!isPirate(target)) {
-		msg.reply(`That user is not a pirate!`);
+		prettyReply(msg, "PirateBot", `You're not yet a pirate! Type ${pre}start to begin your adventure!`);
+	} else if (!mongo.isPirate(target)) {
+		prettyReply(msg, "PirateBot", `That user is not a pirate!`);
 	} else if (msg.author.id == target.id) {
-		msg.reply("You wanna fight yourself, mate? LOL!")
+		prettyReply(msg, "PirateBot", "You wanna fight yourself, mate? LOL!")
 	} else {
-		var pirate = sevenSeas[msg.author.id];
+		var pirate = mongo.getPirate(pirates, msg.author.id);
 		prettyReply(msg, `Dueling...`, pirate.duelUser(target.id));
+		mongo.updatePirate(pirates, pirate);
 	}
 	return;
 }
@@ -412,14 +250,6 @@ function duelUser (msg, cmd) {
 function setConfig (msg) {
 	prettyReply(msg, "This function has not been set up yet!");
 	return;
-}
-
-// CHECK IF MSG SENDER IS A PIRATE
-
-function isPirate (user) {
-	if (user) {
-		return (user.id in sevenSeas);
-	}
 }
 
 function prettyReplyAvatar (msg, title, reply) {
@@ -430,7 +260,7 @@ function prettyReplyAvatar (msg, title, reply) {
 		.setTitle(title)
 		// Set the color of the embed
 		.setColor(0x40e0d0)
-		// Set the main content of the embed
+		//	 Set the main content of the embed
 		.setDescription(reply);
 	// Send the embed to the same channel as the message
 	msg.channel.send(embed);
@@ -448,17 +278,19 @@ function prettyReply (msg, title, reply) {
 	msg.channel.send(embed);
 }
 
+
 // STARTUP
 
-client.on('ready', () => {
-	console.log(`Logged in as ${client.user.tag}!`);
+discClient.on('ready', () => {
+	// mongo.connect();
+	console.log(`Logged in as ${discClient.user.tag}!`);
 });
 
 
 
 //COMMAND INTERPRETER
 
-client.on('message', msg => {
+discClient.on('message', msg => {
 	if (msg.content.startsWith(pre)) {
 		var cmd = msg.content.replace(pre,"").split(" ");
 		var cl = cmd.length;
@@ -509,5 +341,10 @@ client.on('message', msg => {
 });
 
 
+const dbClient = mongo.dbConnect()
 
-client.login(auth.token);
+// console.log(pirates);
+
+discClient.login(auth.token);
+
+
