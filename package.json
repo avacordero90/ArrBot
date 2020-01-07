@@ -1,8 +1,10 @@
 {
 	"name": "PirateBot",
-	"version": "1.2.1",
+	"version": "1.3.2",
 	"description": "PirateBot",
 	"main": "bot.js",
 	"author": "Luna Catastrophe",
-	"dependencies": {}
+	"dependencies": {
+		"discord.js": "^11.5.1"
+	}
 }
